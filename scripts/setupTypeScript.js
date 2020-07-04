@@ -12,18 +12,22 @@ const projectRoot = argv[2] || path.join(__dirname, "..")
 
 // Add deps to pkg.json
 const packageJSON = JSON.parse(fs.readFileSync(path.join(projectRoot, "package.json"), "utf8"))
-packageJSON.dependencies = Object.assign(packageJSON.dependencies, {
-  "svelte-check": "^1.0.0",
+packageJSON.devDependencies = Object.assign(packageJSON.devDependencies, {
+  "svelte-check": "^0.1.0",
   "svelte-preprocess": "^3.0.0",
   "@rollup/plugin-typescript": "^4.0.0",
   "typescript": "^3.9.3",
+  "tslib": "^2.0.0",
   "@tsconfig/svelte": "^1.0.0"
 })
 
 // Add script for checking
 packageJSON.scripts = Object.assign(packageJSON.scripts, {
-  "validate": "svelte-check",
+  "validate": "svelte-check"
 })
+
+// Write the package JSON
+fs.writeFileSync(path.join(projectRoot, "package.json"), JSON.stringify(packageJSON, null, "  "))
 
 // mv src/main.js to main.ts - note, we need to edit rollup.config.js for this too
 const beforeMainJSPath = path.join(projectRoot, "src", "main.js")
@@ -45,6 +49,9 @@ let rollupConfig = fs.readFileSync(rollupConfigPath, "utf8")
 rollupConfig = rollupConfig.replace(`'rollup-plugin-terser';`, `'rollup-plugin-terser';
 import sveltePreprocess from 'svelte-preprocess';
 import typescript from '@rollup/plugin-typescript';`)
+
+// Replace name of entry point
+rollupConfig = rollupConfig.replace(`'src/main.js'`, `'src/main.ts'`)
 
 // Add preprocess to the svelte config, this is tricky because there's no easy signifier.
 // Instead we look for `css:` then the next `}` and add the preprocessor to that
@@ -69,7 +76,10 @@ fs.writeFileSync(rollupConfigPath, rollupConfig)
 
 // Add TSConfig
 const tsconfig = `{
-  "extends": "@tsconfig/svelte/tsconfig.json"
+  "extends": "@tsconfig/svelte/tsconfig.json",
+
+  "include": ["src/**/*"],
+  "exclude": ["node_modules/*", "__sapper__/*", "public/*"],
 }`
 const tsconfigPath =  path.join(projectRoot, "tsconfig.json")
 fs.writeFileSync(tsconfigPath, tsconfig)
